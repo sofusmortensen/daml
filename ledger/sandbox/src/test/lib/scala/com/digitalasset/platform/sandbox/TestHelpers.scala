@@ -12,7 +12,7 @@ import com.digitalasset.daml.lf.data.ImmArray
 import com.digitalasset.daml.lf.engine.Engine
 import com.digitalasset.ledger.api.domain.LedgerId
 import com.digitalasset.platform.sandbox.config.DamlPackageContainer
-import com.digitalasset.platform.sandbox.damle.SandboxTemplateStore
+import com.digitalasset.platform.sandbox.damle.SandboxPackageStore
 import com.digitalasset.platform.sandbox.metrics.MetricsManager
 import com.digitalasset.platform.sandbox.services.ApiSubmissionService
 import com.digitalasset.platform.sandbox.stores.{
@@ -53,7 +53,7 @@ trait TestHelpers {
         TimeProvider.Constant(Instant.EPOCH),
         ActiveContractsInMemory.empty,
         ImmArray.empty,
-        SandboxTemplateStore(damlPackageContainer)
+        SandboxPackageStore(damlPackageContainer)
       )
 
     ApiSubmissionService.create(
