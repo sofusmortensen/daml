@@ -14,6 +14,9 @@ Navigator
 
 - Fixed a regression where Navigator console was not able to inspect contracts and events.
   See `#1454 <https://github.com/digital-asset/daml/issues/1454>`__.
+- Added support for SDK project configuration files. If you start Navigator with the SDK Assistant,
+  Navigator will directly read the ``daml.yaml`` config file instead of the old Navigator config file.
+  See `#1128 <https://github.com/digital-asset/daml/issues/1128>`__.
 
 0.12.22 - 2019-05-29
 --------------------
