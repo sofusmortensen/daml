@@ -1,5 +1,5 @@
 diff --git a/haskell/private/actions/compile.bzl b/haskell/private/actions/compile.bzl
-index 530b23a..ca211e6 100644
+index bfd9ebc..c4ddb7a 100644
 --- a/haskell/private/actions/compile.bzl
 +++ b/haskell/private/actions/compile.bzl
 @@ -1,6 +1,6 @@
@@ -10,7 +10,7 @@ index 530b23a..ca211e6 100644
  load("@bazel_skylib//lib:dicts.bzl", "dicts")
  load("@bazel_skylib//lib:paths.bzl", "paths")
  load(
-@@ -150,18 +150,28 @@ def _compilation_defaults(hs, cc, java, dep_info, plugin_dep_info, srcs, import_
+@@ -149,15 +149,25 @@ def _compilation_defaults(hs, cc, java, dep_info, plugin_dep_info, cc_info, srcs
      if hs.toolchain.is_darwin:
          compile_flags += ["-optl-Wl,-dead_strip_dylibs"]
  
@@ -24,11 +24,8 @@ index 530b23a..ca211e6 100644
 +    package_env_args, other_args = pkg_info_to_ghc_env_args(
 +        package_env_file,
 +        expose_packages(
-                 dep_info,
-                 lib_info = None,
-                 use_direct = True,
-                 use_my_pkg_id = my_pkg_id,
-                 custom_package_databases = None,
+                 package_ids = hs.package_ids,
+                 package_databases = dep_info.package_databases,
                  version = version,
 -            ),
          ),
@@ -43,19 +40,19 @@ index 530b23a..ca211e6 100644
      compile_flags.extend(
          pkg_info_to_compile_flags(
              expose_packages(
-@@ -346,6 +356,7 @@ def _compilation_defaults(hs, cc, java, dep_info, plugin_dep_info, srcs, import_
-             locale_archive_depset,
-             depset(transitive = plugin_tool_inputs),
+@@ -336,6 +346,7 @@ def _compilation_defaults(hs, cc, java, dep_info, plugin_dep_info, cc_info, srcs
+             preprocessors.inputs,
+             plugin_tool_inputs,
              depset([optp_args_file]),
 +            depset([package_env_file]),
          ]),
-         input_manifests = plugin_tool_input_manifests,
+         input_manifests = preprocessors.input_manifests + plugin_tool_input_manifests,
          objects_dir = objects_dir,
 diff --git a/haskell/private/packages.bzl b/haskell/private/packages.bzl
-index e35fbb2..106330d 100644
+index 63b3b8e..575a154 100644
 --- a/haskell/private/packages.bzl
 +++ b/haskell/private/packages.bzl
-@@ -41,6 +41,42 @@ def pkg_info_to_compile_flags(pkg_info, for_plugin = False):
+@@ -38,6 +38,38 @@ def pkg_info_to_compile_flags(pkg_info, for_plugin = False):
  
      return args
  
@@ -80,21 +77,17 @@ index e35fbb2..106330d 100644
 +            "-fno-version-macros",
 +        ])
 +
-+    # GHC environment files only support -package-id
-+    for package in pkg_info.packages:
-+        other_args.extend(["-package", package])
-+
 +    for package_id in pkg_info.package_ids:
 +        package_env_args.extend(["package-id {}".format(package_id)])
 +
 +    # GHC insists on interpreting the paths in package environment files relative
 +    # to the package environment files, so we use this horrible hack.
 +    package_db_loc_prefix = "/".join([".." for f in pkg_env_file.dirname.split("/")])
-+    for package_db in pkg_info.package_dbs:
++    for package_db in pkg_info.package_databases:
 +        package_env_args.extend(["package-db {}/{}".format(package_db_loc_prefix, package_db)])
 +
 +    return package_env_args, other_args
 +
- def expose_packages(hs_info, lib_info, use_direct, use_my_pkg_id, custom_package_databases, version):
+ def expose_packages(package_ids, package_databases, version):
      """
      Returns the information that is needed by GHC in order to enable haskell
