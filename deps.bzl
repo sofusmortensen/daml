@@ -46,6 +46,7 @@ def daml_deps():
                 "@com_github_digital_asset_daml//bazel_tools:haskell-drop-fake-static.patch",
                 "@com_github_digital_asset_daml//bazel_tools:haskell-keep-hs-extra-libs.patch",
                 "@com_github_digital_asset_daml//bazel_tools:haskell-threaded-rts.patch",
+                "@com_github_digital_asset_daml//bazel_tools:haskell-pic-static.patch",
             ],
             patch_args = ["-p1"],
             sha256 = rules_haskell_sha256,
