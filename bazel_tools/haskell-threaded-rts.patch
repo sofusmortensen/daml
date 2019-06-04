@@ -1,0 +1,15 @@
+diff --git a/haskell/private/pkgdb_to_bzl.py b/haskell/private/pkgdb_to_bzl.py
+index bb074bb..d8fa971 100755
+--- a/haskell/private/pkgdb_to_bzl.py
++++ b/haskell/private/pkgdb_to_bzl.py
+@@ -55,6 +55,10 @@ def hs_library_pattern(name, mode = "static", config = ""):
+     """
+     if name == "Cffi" and mode == "dynamic":
+         libname = "ffi"
++    elif name == "HSrts":
++        libname = "HSrts_thr" + config
++        if mode == "dynamic":
++            libname += "-ghc*"
+     else:
+         libname = name + config
+         if mode == "dynamic":
