@@ -85,4 +85,7 @@ package object v2 {
       workflowId: WorkflowId)
 
   final case class LedgerConfiguration(minTTL: Duration, maxTTL: Duration)
+
+  /** DAML-LF package details */
+  final case class PackageDetails(size: Long, knownSince: Instant, sourceDescription: String)
 }
