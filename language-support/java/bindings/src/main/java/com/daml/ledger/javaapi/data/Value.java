@@ -69,6 +69,10 @@ public abstract class Value {
         return (this instanceof Variant) ? Optional.of((Variant) this) : Optional.empty();
     }
 
+    public final Optional<Enum> asEnum() {
+        return (this instanceof Enum) ? Optional.of((Enum) this): Optional.empty();
+    }
+
     public final Optional<ContractId> asContractId() {
         return (this instanceof ContractId) ? Optional.of((ContractId) this) : Optional.empty();
     }
