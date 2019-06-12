@@ -35,6 +35,8 @@ Sandbox
 
 - Introduced a new API for party management.
   See `#1312 <https://github.com/digital-asset/daml/issues/1312>`__.
+- Introduced a new API for package management.
+  See `#1312 <https://github.com/digital-asset/daml/issues/1311>`__.
 
 Scala bindings
 ~~~~~~~~~~~~~~
