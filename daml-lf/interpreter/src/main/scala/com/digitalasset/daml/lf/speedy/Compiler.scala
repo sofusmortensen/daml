@@ -1155,6 +1155,27 @@ final case class Compiler(packages: PackageId PartialFunction Package) {
       SEApp(SEVal(ChoiceDefRef(tmplId, choiceId), None), Array(actors, contractId, argument))
     }
 
+  private def compileExerciseByKey(
+      tmplId: Identifier,
+      key: SExpr,
+      choiceId: ChoiceName,
+      optActors: Option[SExpr],
+      argument: SExpr): SExpr = {
+    // Translates '<actor> does exerciseByKey SomeTemplate <key> SomeChoice with <params>' into:
+    //   let coid = $fetchKey <key>
+    //   in { SomeTemplate$SomeChoice <actor> coid <params> }
+    withEnv { _ =>
+      SEAbs(1) {
+        SELet(
+          /* coid = */ SBUFetchKey(tmplId)(
+            key,
+            SEVar(1) /* token */
+          )
+        ) in compileExercise(tmplId, SEVar(2) /* coid */, choiceId, optActors, argument)
+      }
+    }
+  }
+
   private def compileCreateAndExercise(
       tmplId: Identifier,
       createArg: SValue,
@@ -1184,6 +1205,13 @@ final case class Compiler(packages: PackageId PartialFunction Package) {
       compileExercise(
         templateId,
         SEValue(contractId),
+        choiceId,
+        Some(SEValue(SList(FrontStack(submitters)))),
+        SEValue(argument))
+    case Command.ExerciseByKey(templateId, contractKey, choiceId, submitters, argument) =>
+      compileExerciseByKey(
+        templateId,
+        SEValue(contractKey),
         choiceId,
         Some(SEValue(SList(FrontStack(submitters)))),
         SEValue(argument))
