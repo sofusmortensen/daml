@@ -34,7 +34,7 @@ private[codegen] object HierarchicalOutput {
   type ErrorsAndFiles[E, F] = (Vector[E], Vector[(F, Iterable[Tree])])
 
   type TemplateOrDatatype =
-    (Identifier, DefTemplateWithRecord.FWT \/ DamlRecordOrVariantTypeGen.RecordOrVariant)
+    (Identifier, DefTemplateWithRecord.FWT \/ DamlDataTypeGen.DataType)
 
   /** Pull up each `Rec` into the companion implied, or not, by the keys. */
   private[this] def liftSubtrees[S, F](
@@ -84,7 +84,7 @@ private[codegen] object HierarchicalOutput {
 
             case (name, \/-(ntd)) =>
               (
-                () => DamlRecordOrVariantTypeGen.generate(util, ntd, companionMembers),
+                () => DamlDataTypeGen.generate(util, ntd, companionMembers),
                 s"Writing type declaration for ${name}",
                 s"Cannot generate Scala code for type declaration with name ${name}")
           }

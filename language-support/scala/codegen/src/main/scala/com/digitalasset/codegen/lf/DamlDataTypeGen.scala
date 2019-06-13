@@ -23,7 +23,7 @@ import scala.reflect.runtime.{universe => runUni}
   *
   *  See the comments below for more details on what classes/methods/types are generated.
   */
-object DamlRecordOrVariantTypeGen {
+object DamlDataTypeGen {
 
   import LFUtil.{domainApiAlias, generateIds, rpcValueAlias}
 
@@ -33,11 +33,11 @@ object DamlRecordOrVariantTypeGen {
 
   type FieldWithType = (Ref.Name, iface.Type)
   type VariantField = List[FieldWithType] \/ iface.Type
-  type RecordOrVariant = ScopedDataType.DT[iface.Type, VariantField]
+  type DataType = ScopedDataType.DT[iface.Type, VariantField]
 
   def generate(
       util: LFUtil,
-      recordOrVariant: RecordOrVariant,
+      recordOrVariant: DataType,
       companionMembers: Iterable[Tree]): (File, Iterable[Tree]) =
     generate(
       util,
@@ -53,7 +53,7 @@ object DamlRecordOrVariantTypeGen {
     */
   private[lf] def generate(
       util: LFUtil,
-      typeDecl: RecordOrVariant,
+      typeDecl: DataType,
       isTemplate: Boolean,
       rootClassChildren: Seq[Tree],
       companionChildren: Iterable[Tree]): (File, Iterable[Tree]) = {
@@ -90,8 +90,8 @@ object DamlRecordOrVariantTypeGen {
     val idField =
       if (isTemplate) None
       else Some(q"""
-      override protected val ` recordOrVariantId` =
-        ` mkRecordOrVariantId`($packageIdRef, ${moduleName.dottedName}, ${baseName.dottedName})
+      override protected val ` dataTypeId` =
+        ` mkDataTypeId`($packageIdRef, ${moduleName.dottedName}, ${baseName.dottedName})
     """)
 
     /**
@@ -135,10 +135,61 @@ object DamlRecordOrVariantTypeGen {
     }
 
     /**
+      *  The generated class for a DAML enum type contains:
+      *  - the definition of a "Value" trait
+      *  - the definition of a _case object_ for each constructor of the DAML enum
+      *  - A type class instance (i.e. implicit object) for serializing/deserializing
+      *    to/from the ArgumentValue type (see typed-ledger-api project)
+      */
+    def toScalaDamlEnumType(constructors: List[Ref.Name]): (Tree, Tree) = {
+      val className = damlScalaName.name.capitalize
+
+      (
+        q"""
+          sealed abstract class ${TypeName(className)} extends $typeParent {
+            ..$rootClassChildren
+          }""",
+        q"""
+          object ${TermName(className)} extends $companionParent {
+            ..${constructors.map(c =>
+          q"case object ${TermName(c.capitalize)} extends ${TypeName(className)}")}
+
+
+            implicit def ${TermName(s"${damlScalaName.name} Value")}: $domainApiAlias.Value[$appliedValueType] = new this.`Value ValueRef`[$appliedValueType] {
+              private val readers =
+                ${constructors.map(c => q"$c" -> q"${TermName(c.capitalize)}").toMap}
+
+              override def read(argValue: $rpcValueAlias.Value.Sum): $optionType[$appliedValueType] =
+                argValue.enum flatMap (e => readers.get(e.constructor))
+
+              private val writers =
+                ${constructors.map(c => q"${TermName(c.capitalize)}" -> q"` enum`($c)").toMap}
+
+              override def write(value: $appliedValueType): $rpcValueAlias.Value.Sum = writers(value)
+            }
+
+            ..${idField.toList}
+            ..$companionChildren
+
+            implicit def ${TermName(s"$className LfEncodable")}: $domainApiAlias.encoding.LfEncodable[$appliedValueType] =
+              new $domainApiAlias.encoding.LfEncodable[$appliedValueType] {
+                def encoding(lte: $domainApiAlias.encoding.LfTypeEncoding): lte.Out[$appliedValueType] = {
+                  lte.enumAll(` dataTypeId`,
+                    ..${constructors.map(c =>
+          q"""lte.enumCase[$appliedValueType]($c)(${TermName(c)})""")}
+                  )
+                }
+              }
+          }"""
+      )
+
+    }
+
+    /**
       *  The generated class for a DAML variant type contains:
       *  - the definition of a "Value" trait
       *  - the definition of a _case class_ for each variant constructor of the DAML variant
-      *  - "smart constructors" that create values for each cosntructor automatically up-casting
+      *  - "smart constructors" that create values for each constructor automatically up-casting
       *     to the Value (trait) type
       *  - A type class instance (i.e. implicit object) for serializing/deserializing
       *    to/from the ArgumentValue type (see typed-ledger-api project)
@@ -410,7 +461,7 @@ object DamlRecordOrVariantTypeGen {
         viewsByName,
         recordFieldsByName,
         recordFieldDefsByName)}
-              lte.variantAll(` recordOrVariantId`,
+              lte.variantAll(` dataTypeId`,
                 ..${generateVariantCaseDefList(util)(
         appliedValueType,
         typeArgs,
@@ -437,7 +488,7 @@ object DamlRecordOrVariantTypeGen {
 
       def generateEncodingBody: Tree =
         if (fields.isEmpty) {
-          q"lte.emptyRecord(` recordOrVariantId`, () => $appliedValueType())"
+          q"lte.emptyRecord(` dataTypeId`, () => $appliedValueType())"
         } else {
           q"""
             ${generateRecordFieldsDef(
@@ -446,7 +497,7 @@ object DamlRecordOrVariantTypeGen {
             appliedValueType,
             damlScalaName.qualifiedTermName,
             fieldDefs)}
-            lte.record(` recordOrVariantId`, $recordFields)
+            lte.record(` dataTypeId`, $recordFields)
           """
         }
 
@@ -484,9 +535,7 @@ object DamlRecordOrVariantTypeGen {
     val (klass, companion) = typeDecl.dataType match {
       case iface.Record(fields) => toScalaDamlRecordType(fields)
       case iface.Variant(fields) => toScalaDamlVariantType(fields.toList)
-      case iface.Enum(values @ _) =>
-        // FixMe (RH) https://github.com/digital-asset/daml/issues/105
-        throw new NotImplementedError("Enum types not supported")
+      case iface.Enum(values) => toScalaDamlEnumType(values.toList)
     }
 
     val filePath = damlScalaName.toFileName
@@ -608,7 +657,7 @@ object DamlRecordOrVariantTypeGen {
     val variantType: Tree = q"${TermName(caseName)}[..$typeArgs]"
     q"""
       lte.variantRecordCase[$variantType, $appliedValueType]($caseName,
-        ` recordOrVariantId`, $recordFieldsName) {
+        ` dataTypeId`, $recordFieldsName) {
         case x @ ${TermName(caseName)}(..$placeHolders) =>  x
       }
     """

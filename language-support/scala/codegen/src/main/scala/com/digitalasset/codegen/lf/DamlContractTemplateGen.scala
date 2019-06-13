@@ -85,7 +85,7 @@ object DamlContractTemplateGen {
       q"protected[this] override def templateCompanion(implicit ` d`: _root_.scala.Predef.DummyImplicit) = ${TermName(templateName.name)}"
     )
 
-    DamlRecordOrVariantTypeGen.generate(
+    DamlDataTypeGen.generate(
       util,
       ScopedDataType(templateId, ImmArraySeq.empty, templateInterface.`type`),
       isTemplate = true,
