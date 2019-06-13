@@ -40,6 +40,7 @@ object LedgerApiTestTool {
       .withTimeProvider(TimeProviderType.WallClock)
       .withLedgerIdMode(LedgerIdMode.Dynamic())
       .withCommandSubmissionTtlScaleFactor(toolConfig.commandSubmissionTtlScaleFactor)
+      .withUniqueIdentifiers(toolConfig.uniqueIdentifiers)
       .withRemoteApiEndpoint(
         RemoteApiEndpoint.default
           .withHost(toolConfig.host)

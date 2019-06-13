@@ -44,6 +44,7 @@ object PlatformApplications {
       persistenceEnabled: Boolean = false,
       maxNumberOfAcsContracts: Option[Int] = None,
       commandConfiguration: CommandConfiguration = SandboxConfig.defaultCommandConfig,
+      uniqueIdentifiers: Boolean = true,
       remoteApiEndpoint: Option[RemoteApiEndpoint] = None) {
     require(
       Duration.ofSeconds(timeModel.minTtl.getSeconds) == timeModel.minTtl &&
@@ -58,6 +59,8 @@ object PlatformApplications {
     def withTimeProvider(tpt: TimeProviderType) = copy(timeProviderType = tpt)
 
     def withLedgerIdMode(mode: LedgerIdMode): Config = copy(ledgerId = mode)
+
+    def withUniqueIdentifiers(uniqueIdentifiers: Boolean): Config = copy(uniqueIdentifiers = uniqueIdentifiers)
 
     def withParties(p1: String, rest: String*) = copy(parties = NonEmptyList(p1, rest: _*))
 
