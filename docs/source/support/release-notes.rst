@@ -14,6 +14,8 @@ Sandbox
 
 - Fixed a bug in an internal data structure that broke contract keys.
   See `#1623 <https://github.com/digital-asset/daml/issues/1623>`__.
+- Fixed a bug in migration scripts that could cause databases originally created
+  with older versions of the Sandbox to not upgrade schemas properly.
 
 0.12.25 — 2019-06-13
 --------------------
